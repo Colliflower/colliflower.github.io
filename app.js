@@ -49,7 +49,7 @@ var InitDemo = function () {
     previousRotationOffset = new Float32Array(2);
     mouseCoords = new Int32Array(2);
     offsetFromObjectToMouseVector = new Float32Array(3);
-    cameraDist = 7;
+    cameraDist = 12;
     pauseRotation = false;
     time = 0;
     pauseTime = 0;
@@ -362,6 +362,7 @@ var RunDemo = function (shaders, objectResources) {
 
         gl.useProgram(pickerProgram);
         gl.uniformMatrix4fv(pickerMatViewUniformLocation, gl.FALSE, viewMatrix);
+        
 
         gl.useProgram(program);
 
@@ -588,6 +589,7 @@ function mouseDownHandler(e) {
             middleReleased = false;
             initialMouseRotationPosition[0] = e.clientX;
             initialMouseRotationPosition[1] = e.clientY;
+            return false;
         }
         else if (e.which == 3) {
             mouseOperation = e.which;

@@ -1,4 +1,5 @@
 ﻿body {
+    background-color: #e7f3f9;
 }
 
 .noselect {
@@ -10,4 +11,31 @@
     user-select: none; /* Non-prefixed version, currently
                                   supported by Chrome, Opera and Firefox */
     overflow: hidden
+}
+.container{
+    display: flex;
+    justify-content: center;
+    align-items:center;
+    height: 100%;
+}
+.row{
+    display: flex;
+    justify-content: center;
+    background-color: #a2c7dc;
+    width: auto;
+}
+.fixed-item{
+    padding: 8px;
+    flex-shrink: 1;
+}
+.flex-item{
+    padding: 8px;
+    flex-shrink: 1;
+}
+.instructions {
+    line-height: 25px;
+}
+
+* {
+    font-family: Verdana, Tahoma, "Trebuchet MS", "DejuVu Sans", "Bitstream Vera Sans", sans-serif;
 }

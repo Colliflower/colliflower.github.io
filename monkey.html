@@ -1,0 +1,29 @@
+<html>
+	<head>
+		<title>Trevor Anderson</title>
+        <link rel="stylesheet" href="style.css"/>
+	</head>
+	<body onload="InitDemo();">
+        
+        <div class="container">
+            <div class="row">
+                <div class="fixed-item">
+                    <canvas id="game-surface" width="1200" height="900" class="noselect" oncontextmenu="event.preventDefault();">
+                        Your browser does not support HTML5
+                    </canvas>
+                </div>
+                <div class="flex-item">
+                    <span class = "instructions">
+                        Middle-click to rotate.</br>
+                        Scroll to zoom.</br>
+                        Right-click to move monkey.</br>
+                        Space to stop monkeys from spinning.</br>
+                    </span>
+                </div>
+            </div>
+        </div>
+        <script src="util.js"></script>
+        <script src="app.js"></script>
+        <script src="gl-matrix.js"></script>
+	</body>
+</html>
