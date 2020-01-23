@@ -20,6 +20,12 @@ var pickObject;
 var mouseOperation;
 var offsetFromObjectToMouseVector;
 var originalObjectLocation;
+// touch variables
+var scaleStartDist;
+var scaleCurrDist;
+var touchOperation;
+var touchCoords;
+var intialCameraDist;
 
 
 var InitDemo = function () {
@@ -49,6 +55,7 @@ var InitDemo = function () {
     previousRotationOffset = new Float32Array(2);
     mouseCoords = new Int32Array(2);
     offsetFromObjectToMouseVector = new Float32Array(3);
+    touchCoords = new Int32Array(2);
     cameraDist = 12;
     pauseRotation = false;
     time = 0;
@@ -56,6 +63,8 @@ var InitDemo = function () {
     unpauseTime = 0;
     pickObject = false;
     mouseOperation = -1;
+    touchOperation = -1;
+    startDist = 0;
     //var monkey1Position = new Float32Array(3);
     //glMatrix.vec3.set(monkey1Position, 0, 0, 0);
     //var monkey1Quats = new Float32Array(4);
@@ -86,6 +95,10 @@ var RunDemo = function (shaders, objectResources) {
     document.addEventListener('mousemove', mouseMoveHandler);
     canvas.addEventListener('mousedown', mouseDownHandler);
     document.addEventListener('mouseup', mouseUpHandler);
+    canvas.addEventListener('touchstart', touchStartHandler);
+    canvas.addEventListener('touchmove', touchMoveHandler);
+    canvas.addEventListener('touchend', touchEndHandler);
+    canvas.addEventListener('touchcancel', touchCancelHandler);
     window.addEventListener("wheel", mouseScrollHandler);
     document.addEventListener('keydown', keyPressHandler);
 	var gl = canvas.getContext('webgl');
@@ -363,11 +376,16 @@ var RunDemo = function (shaders, objectResources) {
         gl.useProgram(pickerProgram);
         gl.uniformMatrix4fv(pickerMatViewUniformLocation, gl.FALSE, viewMatrix);
         
-
         gl.useProgram(program);
 
         // Mouse object picker logic
-        if (pickObject) {
+        if (pickObject || touchOperation == 0) {
+            if (touchOperation == 0)
+            {
+                mouseCoords[0] = touchCoords[0];
+                mouseCoords[1] = touchCoords[1];
+            }
+
             x = mouseCoords[0] - rect.left;
             y = rect.bottom - mouseCoords[1];
             pickedObjectIx = -1;
@@ -438,6 +456,19 @@ var RunDemo = function (shaders, objectResources) {
                 if (pickedObjectIx >= objectResources.length) {
                     pickedObjectIx = -1;
                 }
+
+                if (touchOperation == 0)
+                {
+                    if (pickedObjectIx != -1) {
+                        touchOperation = 1;
+                        pickObject = true;
+                    }
+                    else {
+                        initialMouseRotationPosition[0] = mouseCoords[0];
+                        initialMouseRotationPosition[1] = mouseCoords[1];
+                        touchOperation = 2;
+                    }
+                }
                 
                 gl.useProgram(program);
             }
@@ -449,7 +480,13 @@ var RunDemo = function (shaders, objectResources) {
         
         for (var objectIx = 0; objectIx < objectResources.length; objectIx++) {
             // We're moving this object
-            if (mouseOperation == 3 && objectIx == pickedObjectIx) {
+            if ((mouseOperation == 3 || touchOperation == 1) && objectIx == pickedObjectIx) {
+                if (touchOperation == 1)
+                {
+                    mouseCoords[0] = touchCoords[0];
+                    mouseCoords[1] = touchCoords[1];
+                }
+
                 mouseWorldCoords[0] = 2.0 *(mouseCoords[0] - rect.left) / rect.width - 1.0;
                 mouseWorldCoords[1] = 2.0 *(rect.bottom - mouseCoords[1]) / rect.height - 1.0;
                 mouseWorldCoords[2] = -1.0;
@@ -572,12 +609,12 @@ var logMat4 = function(mat)
 
 function mouseMoveHandler(e) {
     if (!middleReleased) {
-        mouseRotationOffset[0] = e.clientX - initialMouseRotationPosition[0] + previousRotationOffset[0];
-        mouseRotationOffset[1] = e.clientY - initialMouseRotationPosition[1] + previousRotationOffset[1];
+        mouseRotationOffset[0] = e.pageX - initialMouseRotationPosition[0] + previousRotationOffset[0];
+        mouseRotationOffset[1] = e.pageY - initialMouseRotationPosition[1] + previousRotationOffset[1];
     }
 
-    mouseCoords[0] = e.clientX;
-    mouseCoords[1] = e.clientY;
+    mouseCoords[0] = e.pageX;
+    mouseCoords[1] = e.pageY;
 }
 
 function mouseDownHandler(e) {
@@ -587,8 +624,8 @@ function mouseDownHandler(e) {
             mouseOperation = e.which;
             middlePressed = true;
             middleReleased = false;
-            initialMouseRotationPosition[0] = e.clientX;
-            initialMouseRotationPosition[1] = e.clientY;
+            initialMouseRotationPosition[0] = e.pageX;
+            initialMouseRotationPosition[1] = e.pageY;
             return false;
         }
         else if (e.which == 3) {
@@ -628,4 +665,87 @@ function keyPressHandler(e) {
     if (e.keyCode == 32) {
         pauseRotation = !pauseRotation;
     }
+}
+
+function touchStartHandler(e) {
+    e.preventDefault();
+    switch (e.touches.length) {
+        case 1:
+            handleOneTouch(e);
+            break;
+        case 2:
+            handleTwoTouch(e);
+            break;
+        default:
+            touchOperation = 0;
+    }
+}
+
+function handleOneTouch(e) {
+    touchOperation = 0;
+    touchCoords[0] = e.touches[0].pageX;
+    touchCoords[1] = e.touches[0].pageY;
+}
+
+function handleTwoTouch(e) {
+    scaleStartDist = Math.sqrt(Math.pow(e.touches[0].pageX - e.touches[1].pageX, 2) + Math.pow(e.touches[0].pageY - e.touches[1].pageY, 2));
+    intialCameraDist = cameraDist;
+    touchOperation = 3;
+}
+
+function touchMoveHandler(e) {
+    switch (touchOperation) {
+        case 1:
+            if (e.touches.length != 1){
+                console.error("Touch move event", touchOperation, "with more touches than expected", e.touches.length);
+                touchOperation = -1;
+                break;
+            }
+            touchCoords[0] = e.touches[0].pageX;
+            touchCoords[1] = e.touches[0].pageY;
+            break;
+        case 2:
+            if (e.touches.length != 1){
+                console.error("Touch move event", touchOperation, "with more touches than expected", e.touches.length);
+                touchOperation = -1;
+                break;
+            }
+            mouseRotationOffset[0] = e.touches[0].pageX - initialMouseRotationPosition[0] + previousRotationOffset[0];
+            mouseRotationOffset[1] = e.touches[0].pageY - initialMouseRotationPosition[1] + previousRotationOffset[1];
+            break;
+        case 3:
+            if (e.touches.length != 2){
+                console.error("Touch move event", touchOperation, "with more touches than expected", e.touches.length);
+                touchOperation = -1;
+                break;
+            }
+            scaleCurrDist = Math.sqrt(Math.pow(e.touches[0].pageX - e.touches[1].pageX, 2) + Math.pow(e.touches[0].pageY - e.touches[1].pageY, 2));
+            cameraDist = intialCameraDist + 0.1 *(scaleStartDist - scaleCurrDist);
+            if (cameraDist < 0.5) {
+                cameraDist = 0.5;
+            }
+            break;
+    }
+}
+
+function touchEndHandler(e) {
+    console.log("Touch end", touchOperation);
+    switch (touchOperation) {
+        case 2:
+            previousRotationOffset[0] = mouseRotationOffset[0];
+            previousRotationOffset[1] = mouseRotationOffset[1];
+            break;
+    }
+    touchOperation = -1;
+}
+
+function touchCancelHandler(e) {
+    console.log("Touch cancel", touchOperation);
+    switch (touchOperation) {
+        case 2:
+            previousRotationOffset[0] = mouseRotationOffset[0];
+            previousRotationOffset[1] = mouseRotationOffset[1];
+            break;
+    }
+    touchOperation = -1;
 }
