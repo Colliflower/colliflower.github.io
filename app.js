@@ -269,13 +269,15 @@ var RunDemo = function (shaders, objectResources) {
         
         objects.push(currObject);
 
-        /*var basicTexture = new Uint8Array(
+        /*
+        //--- Debug Texture ---
+        var basicTexture = new Uint8Array(
             [
                 255, 0, 0, 255,
                 0, 255, 0, 255,
                 0, 0, 255, 255,
                 0, 0, 0, 255,]);
-	    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 2, 2, 0, gl.RGBA, gl.UNSIGNED_BYTE, basicTexture); */
+	    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 2, 2, 0, gl.RGBA, gl.UNSIGNED_BYTE, basicTexture);*/
     }
 
 	gl.bindTexture(gl.TEXTURE_2D, null);
@@ -310,6 +312,7 @@ var RunDemo = function (shaders, objectResources) {
     var pickerMatWorldUniformLocation = gl.getUniformLocation(pickerProgram, 'mWorld');
     var pickerMatViewUniformLocation = gl.getUniformLocation(pickerProgram, 'mView');
     var pickerMatProjUniformLocation = gl.getUniformLocation(pickerProgram, 'mProj');
+    var pickerOffsetUniformLocation = gl.getUniformLocation(pickerProgram, 'offset')
 
     gl.uniformMatrix4fv(pickerMatWorldUniformLocation, gl.FALSE, worldMatrix);
     gl.uniformMatrix4fv(pickerMatViewUniformLocation, gl.FALSE, viewMatrix);
@@ -398,6 +401,8 @@ var RunDemo = function (shaders, objectResources) {
                 gl.clearColor(1.0, 1.0, 1.0, 1.0);
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+                gl.uniform1f(pickerOffsetUniformLocation, 0.0);
+
                 for (var objectIx = 0; objectIx < objectResources.length; objectIx++) {
                     var currObject = objects[objectIx];
 
@@ -424,6 +429,18 @@ var RunDemo = function (shaders, objectResources) {
                         0// Offset from beginning of single vertex to this attribute
                     );
                     gl.enableVertexAttribArray(positionAttribLocation);
+
+                    gl.bindBuffer(gl.ARRAY_BUFFER, currObject.normalBufferObject);
+                    normalAttribLocation = gl.getAttribLocation(pickerProgram, 'vertNormal');
+                    gl.vertexAttribPointer(
+                        normalAttribLocation, // Attribute Location
+                        3, // Number of elements per attribute
+                        gl.FLOAT, // Type of elements
+                        gl.FALSE, // Whether data is normalized
+                        3 * Float32Array.BYTES_PER_ELEMENT, // Size of an individual attribute
+                        0// Offset from beginning of single vertex to this attribute
+                    );
+                    gl.enableVertexAttribArray(normalAttribLocation);
 
                     gl.drawElements(gl.TRIANGLES, currObject.indicesCount, gl.UNSIGNED_SHORT, 0);
                 }
@@ -479,7 +496,10 @@ var RunDemo = function (shaders, objectResources) {
         gl.clearColor(0.5+0.5*(Math.sin(angle / 100)), 1 - 0.5*Math.abs(Math.sin(angle / 100)), 0.85, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         
+        var objectSelected = false;
+    
         for (var objectIx = 0; objectIx < objectResources.length; objectIx++) {
+            objectSelected = false;
             // We're moving this object
             if ((mouseOperation == 3 || touchOperation == 1) && objectIx == pickedObjectIx) {
                 if (touchOperation == 1)
@@ -527,13 +547,60 @@ var RunDemo = function (shaders, objectResources) {
                 }
 
                 pickObject = false;
+                objectSelected = true;
             }
+
             var currObject = objects[objectIx];
 
             if (currObject.rotationMultiplier != 0) {
                 glMatrix.quat.fromEuler(currObject.rotation, 90, 0, currObject.rotationMultiplier * angle);
             }
             glMatrix.mat4.fromRotationTranslation(worldMatrix, currObject.rotation, currObject.coords);
+
+            // Outline the object
+            if (objectSelected) {
+                gl.useProgram(pickerProgram);
+                gl.cullFace(gl.FRONT);
+
+                gl.uniform1f(pickerOffsetUniformLocation, 0.1);
+                
+                gl.uniformMatrix4fv(pickerMatWorldUniformLocation, gl.FALSE, worldMatrix);
+
+                gl.bindBuffer(gl.ARRAY_BUFFER, currObject.vertexBufferObject);
+                positionAttribLocation = gl.getAttribLocation(pickerProgram, 'vertPosition');
+                gl.vertexAttribPointer(
+                    positionAttribLocation, // Attribute Location
+                    3, // Number of elements per attribute
+                    gl.FLOAT, // Type of elements
+                    gl.FALSE, // Whether data is normalized
+                    3 * Float32Array.BYTES_PER_ELEMENT, // Size of an individual attribute
+                    0// Offset from beginning of single vertex to this attribute
+                );
+                gl.enableVertexAttribArray(positionAttribLocation);
+
+                gl.bindBuffer(gl.ARRAY_BUFFER, currObject.normalBufferObject);
+                normalAttribLocation = gl.getAttribLocation(pickerProgram, 'vertNormal');
+                gl.vertexAttribPointer(
+                    normalAttribLocation, // Attribute Location
+                    3, // Number of elements per attribute
+                    gl.FLOAT, // Type of elements
+                    gl.TRUE, // Whether data is normalized
+                    3 * Float32Array.BYTES_PER_ELEMENT, // Size of an individual attribute
+                    0 * Float32Array.BYTES_PER_ELEMENT// Offset from beginning of single vertex to this attribute
+                );
+                gl.enableVertexAttribArray(normalAttribLocation);
+                
+                rgba[0] = 1.0;
+                rgba[1] = 0.8;
+                rgba[2] = 0.1;
+                gl.uniform4fv(pickerColorUniformLocation, rgba);
+                
+                gl.drawElements(gl.TRIANGLES, currObject.indicesCount, gl.UNSIGNED_SHORT, 0);
+
+                gl.useProgram(program);
+                gl.cullFace(gl.BACK);
+            }
+
             gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, worldMatrix);
             
             gl.bindBuffer(gl.ARRAY_BUFFER, currObject.vertexBufferObject);
