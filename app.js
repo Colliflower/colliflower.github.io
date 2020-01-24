@@ -353,6 +353,7 @@ var RunDemo = function (shaders, objectResources) {
     var denom, t;
     var cameraCenterRay = new Float32Array(3);
     var moved = false;
+    var xRatio = rect.width/canvas.width, yRatio = rect.height/canvas.height;
 
     var loop = function () {
         if (!pauseRotation) {
@@ -386,8 +387,8 @@ var RunDemo = function (shaders, objectResources) {
                 mouseCoords[1] = touchCoords[1];
             }
 
-            x = mouseCoords[0] - rect.left;
-            y = rect.bottom - mouseCoords[1];
+            x = parseInt((mouseCoords[0] - rect.left) / xRatio);
+            y = parseInt((rect.bottom - mouseCoords[1]) / yRatio);
             pickedObjectIx = -1;
             candidateObjectIx = -1;
 

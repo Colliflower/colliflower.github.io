@@ -36,6 +36,15 @@
     line-height: 25px;
 }
 
+#game-surface {
+    width: 1024;
+    height: 720;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-crisp-edges;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
 * {
     font-family: Verdana, Tahoma, "Trebuchet MS", "DejuVu Sans", "Bitstream Vera Sans", sans-serif;
 }
